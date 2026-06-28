@@ -1,0 +1,12 @@
+{
+  "request_id": "req-low-risk-001",
+  "source": "n8n_webhook",
+  "raw_text": "Please update SKU-100 by 40 units to reflect the latest warehouse recount.",
+  "metadata": {
+    "inventory_item_id": "SKU-100",
+    "inventory_delta": 40,
+    "reason": "Warehouse recount",
+    "confidence": 0.93
+  }
+}
+

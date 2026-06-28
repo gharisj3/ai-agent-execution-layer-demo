@@ -1,0 +1,15 @@
+{
+  "request_id": "req-high-risk-001",
+  "source": "n8n_webhook",
+  "raw_text": "Please process a vendor payment of 18500 USD to vendor-204 immediately for consulting services.",
+  "metadata": {
+    "vendor_id": "VENDOR-204",
+    "vendor_name": "Northwind Consulting",
+    "vendor_status": "active",
+    "amount": 18500,
+    "currency": "USD",
+    "reason": "Monthly consulting invoice",
+    "confidence": 0.95
+  }
+}
+

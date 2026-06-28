@@ -1,0 +1,167 @@
+# ai-agent-execution-layer-demo
+
+`ai-agent-execution-layer-demo` is a practical demo showing why raw LLM agents should not directly execute actions inside ERP or production systems, and how an orchestration layer such as n8n can wrap AI reasoning inside deterministic controls, approvals, validation, and audit logging.
+
+## Problem Statement
+
+Teams are increasingly using LLMs to interpret emails, support tickets, supplier messages, and operational requests. That reasoning is useful. The risk appears when a model is allowed to directly trigger vendor payments, inventory changes, or other ERP writes without deterministic checks.
+
+This demo shows a safer pattern:
+
+- AI handles extraction and reasoning.
+- n8n handles orchestration and branching.
+- Guardrails decide whether execution is allowed, blocked, or requires approval.
+- Mock ERP endpoints simulate controlled system writes.
+- Audit events capture the full decision trail.
+
+## Why Raw AI Agents Are Risky Inside ERP Systems
+
+- LLM output is probabilistic, while ERP writes must be deterministic.
+- A plausible extraction can still be wrong, incomplete, or low-confidence.
+- Production actions need thresholds, allow-lists, approval paths, and traceability.
+- Human reviewers need clear evidence for high-risk requests before execution.
+
+## Architecture Overview
+
+The repo demonstrates an execution-layer pattern rather than a real ERP connector.
+
+```mermaid
+flowchart TD
+    A["Webhook Request"] --> B["n8n Webhook"]
+    B --> C["FastAPI /agent/extract"]
+    C --> D["Pydantic Validation"]
+    D --> E["n8n Guardrail Branching"]
+    E -->|allowed| F["Mock ERP Action"]
+    E -->|approval_required| G["Human Approval /approval/simulate"]
+    G --> F
+    E -->|blocked| H["Reject Request"]
+    F --> I["Audit Event Store"]
+    G --> I
+    H --> I
+    I --> J["Final API Response"]
+```
+
+## Demo Scenario
+
+An incoming webhook contains a request for either:
+
+- a vendor payment, or
+- an inventory update
+
+The text is sent to `/agent/extract`, converted into structured intent, validated, then evaluated by deterministic guardrails. Low-risk actions can proceed to the mock ERP. High-risk actions require approval. Blocked actions never reach execution.
+
+## Setup Instructions
+
+1. Create and activate a Python 3.11+ virtual environment.
+2. Copy `.env.example` to `.env`.
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Start the API:
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+## Docker Compose Instructions
+
+Build and run the demo stack:
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+- FastAPI demo API: `http://localhost:8000`
+- n8n: `http://localhost:5678`
+
+## How To Import The n8n Workflow
+
+1. Start n8n.
+2. Open the n8n UI.
+3. Choose import workflow.
+4. Import [workflows/n8n-ai-execution-layer-demo.json](/E:/ai-agent-execution-layer-demo/workflows/n8n-ai-execution-layer-demo.json).
+5. Update any base URL values if your API is not running at `http://host.docker.internal:8000` or `http://api:8000`.
+
+## Sample curl Commands
+
+Health check:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Low-risk inventory extraction:
+
+```bash
+curl -X POST http://localhost:8000/agent/extract \
+  -H "Content-Type: application/json" \
+  -d @sample_payloads/low_risk_inventory_update.json
+```
+
+Guardrail evaluation:
+
+```bash
+curl -X POST http://localhost:8000/guardrails/evaluate \
+  -H "Content-Type: application/json" \
+  -d @sample_payloads/high_risk_vendor_payment.json
+```
+
+List audit events:
+
+```bash
+curl http://localhost:8000/audit/events
+```
+
+## Screenshots
+
+See [docs/screenshots-placeholder.md](/E:/ai-agent-execution-layer-demo/docs/screenshots-placeholder.md) for suggested captures.
+
+## Security Notes
+
+This is a demo only. Before using a similar pattern against a real ERP, add:
+
+- authentication and authorization
+- RBAC
+- secure approval design
+- rate limits
+- secret management
+- stronger audit retention and tamper controls
+- environment isolation
+
+Self-hosting helps control infrastructure, but it does not automatically guarantee compliance. GDPR or local compliance depends on implementation details, hosting, contracts, subprocessors, and data handling controls.
+
+More detail: [docs/security-notes.md](/E:/ai-agent-execution-layer-demo/docs/security-notes.md)
+
+## What This Demo Proves
+
+- AI extraction can be useful without granting direct system write authority.
+- A visual orchestration layer can enforce deterministic guardrails around AI output.
+- High-risk actions can be routed into approvals instead of direct execution.
+- Audit logging makes decisions reviewable and explainable.
+
+## What This Demo Is Not
+
+- not a production ERP integration
+- not a replacement for security architecture
+- not a compliance guarantee
+- not a real-time payment engine
+
+## Need This Adapted To Your ERP Stack?
+
+This architecture can be adapted for Odoo, Oracle, Django/FastAPI backends, n8n orchestration, approval workflows, audit logs, and AI extraction or validation layers. If you need a version tailored to your operational model, the safest approach is to design the guardrails and approval paths around your real business rules before any live ERP write is introduced.
+
+## Repo Layout
+
+- [app/main.py](/E:/ai-agent-execution-layer-demo/app/main.py)
+- [app/agent_service.py](/E:/ai-agent-execution-layer-demo/app/agent_service.py)
+- [app/guardrails.py](/E:/ai-agent-execution-layer-demo/app/guardrails.py)
+- [app/mock_erp.py](/E:/ai-agent-execution-layer-demo/app/mock_erp.py)
+- [workflows/n8n-ai-execution-layer-demo.json](/E:/ai-agent-execution-layer-demo/workflows/n8n-ai-execution-layer-demo.json)
+- [docs/architecture.md](/E:/ai-agent-execution-layer-demo/docs/architecture.md)
+- [docs/demo-script.md](/E:/ai-agent-execution-layer-demo/docs/demo-script.md)
+

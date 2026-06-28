@@ -1,0 +1,11 @@
+{
+  "request_id": "req-invalid-001",
+  "source": "n8n_webhook",
+  "raw_text": "Pay 7000 to the inactive supplier maybe tomorrow.",
+  "metadata": {
+    "vendor_status": "inactive",
+    "confidence": 0.61,
+    "reason": "Intentionally incomplete demo payload"
+  }
+}
+
