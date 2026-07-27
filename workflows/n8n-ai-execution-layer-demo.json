@@ -16,7 +16,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/agent/extract",
+        "url": "http://api:8000/agent/extract",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}"
@@ -30,10 +30,10 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/guardrails/evaluate",
+        "url": "http://api:8000/guardrails/evaluate-intent",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $('Webhook Trigger').item.json }}"
+        "jsonBody": "={{ $json }}"
       },
       "id": "EvaluateGuardrails",
       "name": "Evaluate Guardrails",
@@ -89,7 +89,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $json.extracted_intent.action_type === 'vendor_payment' ? 'http://host.docker.internal:8000/erp/vendor-payment' : 'http://host.docker.internal:8000/erp/inventory-update' }}",
+        "url": "={{ $json.extracted_intent.action_type === 'vendor_payment' ? 'http://api:8000/erp/vendor-payment' : 'http://api:8000/erp/inventory-update' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json.extracted_intent }}"
@@ -103,7 +103,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/approval/simulate",
+        "url": "http://api:8000/approval/simulate",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\"request_id\":\"{{$json.request_id}}\",\"approver\":\"demo.approver@example.com\",\"decision\":\"approve\",\"comments\":\"Approved for demo flow\"}"
@@ -117,7 +117,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $('Evaluate Guardrails').item.json.extracted_intent.action_type === 'vendor_payment' ? 'http://host.docker.internal:8000/erp/vendor-payment' : 'http://host.docker.internal:8000/erp/inventory-update' }}",
+        "url": "={{ $('Evaluate Guardrails').item.json.extracted_intent.action_type === 'vendor_payment' ? 'http://api:8000/erp/vendor-payment' : 'http://api:8000/erp/inventory-update' }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $('Evaluate Guardrails').item.json.extracted_intent }}"
@@ -194,7 +194,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:8000/audit/events",
+        "url": "http://api:8000/audit/events",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}"
@@ -289,4 +289,3 @@
   },
   "id": "ai-agent-execution-layer-demo"
 }
-

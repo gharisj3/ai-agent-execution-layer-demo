@@ -1,46 +1,54 @@
-# Architecture Notes
+# Architecture
 
-## Intent
+## Design Principle
 
-The demo separates reasoning from execution:
+**AI can reason. Deterministic systems should control execution.**
 
-- FastAPI `/agent/extract` produces structured intent.
-- Pydantic schemas enforce shape and typing.
-- Guardrails evaluate business rules deterministically.
-- n8n owns orchestration and branching.
-- Mock ERP endpoints simulate controlled execution.
-- Audit storage records what happened and why.
+The system treats model output as untrusted proposed intent. LLM output does not equal authorization to execute a business action.
 
-## Components
+```mermaid
+flowchart LR
+    A["Webhook"] --> B["AI Layer"]
+    B --> C["Validation Layer"]
+    C --> D["Execution Policy Layer"]
+    D -->|allowed| E["Mock ERP Layer"]
+    D -->|approval_required| F["Approval Layer"]
+    F --> E
+    D -->|blocked| G["Reject"]
+    E --> H["Audit Layer"]
+    G --> H
+```
 
-### API layer
+## Responsibility Boundaries
 
-- `app/main.py`: FastAPI routes and lifecycle setup
-- `app/agent_service.py`: mock-first extraction with optional provider calls
-- `app/guardrails.py`: deterministic control logic
-- `app/mock_erp.py`: fake write endpoints
-- `app/audit.py` and `app/database.py`: audit persistence
+### AI Layer
 
-### Workflow layer
+`app/agent_service.py` interprets natural language and proposes structured intent. Mock extraction is enabled by default; OpenAI and Groq are optional. This layer has no execution authority.
 
-The n8n workflow provides:
+### Validation Layer
 
-- webhook intake
-- extraction request
-- guardrail evaluation
-- branch on `allowed`, `approval_required`, or `blocked`
-- simulated approval step
-- mock ERP execution
-- audit write-back
+`app/schemas.py` uses Pydantic to validate expected fields, types, enums, and confidence bounds. Malformed or unsupported action values are rejected before policy evaluation. n8n passes the validated extraction to `/guardrails/evaluate-intent`, avoiding a second model call.
 
-## Why n8n Matters Here
+### Execution Policy Layer
 
-n8n is the visible control plane. It makes the path from request to action reviewable and deterministic. The LLM is treated as a reasoning component, not as the final authority.
+`app/guardrails.py` applies deterministic rules: supported action, required identifier, confidence, inactive-vendor blocking, and configurable payment/inventory thresholds. It returns `allowed`, `approval_required`, or `blocked`.
 
-## Suggested Extensions
+### Approval Layer
 
-- add SSO-backed human approvals
-- add signed audit trails
-- add RBAC-scoped action allow-lists
-- replace mock ERP calls with adapter services behind service accounts
+n8n routes sensitive requests through `/approval/simulate`. The included node automatically approves for demonstration and is not identity-backed human approval. Production use would need authenticated approvers, authorization, separation of duties, and durable decision records.
 
+### Mock ERP Layer
+
+`app/mock_erp.py` creates simulated payment or inventory results and generated references. It does not connect to an ERP or payment network.
+
+### Audit Layer
+
+`app/audit.py` and `app/database.py` store the request, intent, decision, approval status, simulated result, and timestamp in SQLite.
+
+## Orchestration
+
+The [n8n workflow](../workflows/n8n-ai-execution-layer-demo.json) visibly connects intake, extraction, guardrail evaluation, branching, simulated approval, mock execution, and audit write-back. Within Docker Compose it calls the API at `http://api:8000`.
+
+## Trust Boundary
+
+Only the deterministic decision path should authorize a call to a business adapter. A production adapter would also enforce authorization independently; workflow branching alone is not a security boundary.

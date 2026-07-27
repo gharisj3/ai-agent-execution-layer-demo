@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
-from app.agent_service import extract_intent
+from app.agent_service import IntentExtractionError, extract_intent
 from app.audit import fetch_audit_events, write_audit_event
 from app.database import init_db
 from app.guardrails import evaluate_guardrails
@@ -39,12 +39,23 @@ def health() -> dict[str, str]:
 
 @app.post("/agent/extract", response_model=ExtractedIntent)
 def agent_extract(payload: IncomingRequest) -> ExtractedIntent:
-    return extract_intent(payload)
+    try:
+        return extract_intent(payload)
+    except IntentExtractionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/guardrails/evaluate", response_model=GuardrailDecision)
 def guardrail_evaluate(payload: IncomingRequest) -> GuardrailDecision:
-    intent = extract_intent(payload)
+    try:
+        intent = extract_intent(payload)
+    except IntentExtractionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return evaluate_guardrails(intent)
+
+
+@app.post("/guardrails/evaluate-intent", response_model=GuardrailDecision)
+def guardrail_evaluate_intent(intent: ExtractedIntent) -> GuardrailDecision:
     return evaluate_guardrails(intent)
 
 
@@ -81,4 +92,3 @@ def audit_events() -> list[AuditEvent]:
 @app.post("/audit/events", response_model=AuditEvent)
 def create_audit_event(payload: AuditEvent) -> AuditEvent:
     return write_audit_event(payload)
-
