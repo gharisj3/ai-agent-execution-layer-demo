@@ -1,0 +1,14 @@
+{
+  "request_id": "req-blocked-001",
+  "source": "n8n_webhook",
+  "raw_text": "Please process a vendor payment of 2000 USD to vendor-410 for an outstanding invoice.",
+  "metadata": {
+    "vendor_id": "VENDOR-410",
+    "vendor_name": "Inactive Demo Supplier",
+    "vendor_status": "inactive",
+    "amount": 2000,
+    "currency": "USD",
+    "reason": "Blocked-path demonstration",
+    "confidence": 0.96
+  }
+}
