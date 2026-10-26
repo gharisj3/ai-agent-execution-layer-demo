@@ -14,7 +14,9 @@ def _sqlite_path_from_url(database_url: str) -> Path:
     parsed = urlparse(database_url)
     if parsed.scheme == "sqlite":
         return Path(parsed.path).resolve()
-    raise ValueError("This demo supports SQLite by default. Configure a sqlite:/// URL.")
+    raise ValueError(
+        "This demo supports SQLite by default. Configure a sqlite:/// URL."
+    )
 
 
 DB_PATH = _sqlite_path_from_url(settings.database_url)
@@ -45,7 +47,50 @@ def init_db() -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS approvals (
+                approval_id TEXT PRIMARY KEY,
+                request_id TEXT NOT NULL,
+                intent_hash TEXT NOT NULL,
+                decision TEXT NOT NULL,
+                approver TEXT NOT NULL,
+                comments TEXT NOT NULL,
+                consumed INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
         connection.commit()
+
+
+def record_approval(
+    approval_id: str,
+    request_id: str,
+    intent_hash: str,
+    decision: str,
+    approver: str,
+    comments: str,
+) -> None:
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE approvals SET consumed = 1 WHERE request_id = ? AND consumed = 0",
+            (request_id,),
+        )
+        connection.execute(
+            "INSERT INTO approvals (approval_id, request_id, intent_hash, decision, approver, comments) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (approval_id, request_id, intent_hash, decision, approver, comments),
+        )
+
+
+def consume_approval(approval_id: str, request_id: str, intent_hash: str) -> bool:
+    with get_connection() as connection:
+        updated = connection.execute(
+            "UPDATE approvals SET consumed = 1 WHERE approval_id = ? AND request_id = ? "
+            "AND intent_hash = ? AND decision = 'approve' AND consumed = 0",
+            (approval_id, request_id, intent_hash),
+        )
+        return updated.rowcount == 1
 
 
 def insert_audit_event(record: dict[str, object]) -> None:
@@ -103,4 +148,3 @@ def list_audit_events() -> list[dict[str, object]]:
             }
         )
     return events
-

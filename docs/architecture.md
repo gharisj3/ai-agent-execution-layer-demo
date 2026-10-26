@@ -26,12 +26,13 @@ The demo separates reasoning from execution:
 The n8n workflow provides:
 
 - webhook intake
-- extraction request
-- guardrail evaluation
+- one extraction-and-guardrail request to `/guardrails/evaluate`
 - branch on `allowed`, `approval_required`, or `blocked`
-- simulated approval step
+- a pending-review response that does not execute high-risk actions
 - mock ERP execution
 - audit write-back
+
+Separately, `/approval/decide` authenticates a configured reviewer token and records an intent-bound decision. ERP routes recheck guardrails and atomically consume a matching, unused approval for high-risk actions. `/approval/simulate` cannot produce that approval. Reviewer labels and intent business facts are still demo inputs; production identity and authoritative ERP lookups remain future work.
 
 ## Why n8n Matters Here
 

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     groq_api_key: str = ""
     groq_model: str = "llama-3.1-8b-instant"
+    approval_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -25,4 +26,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

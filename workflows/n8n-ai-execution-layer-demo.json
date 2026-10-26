@@ -11,21 +11,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [220, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://host.docker.internal:8000/agent/extract",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json }}"
-      },
-      "id": "ExtractIntent",
-      "name": "Extract Intent",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [470, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -33,13 +22,16 @@
         "url": "http://host.docker.internal:8000/guardrails/evaluate",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $('Webhook Trigger').item.json }}"
+        "jsonBody": "={{ $('Webhook Trigger').item.json.body || $('Webhook Trigger').item.json }}"
       },
       "id": "EvaluateGuardrails",
       "name": "Evaluate Guardrails",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [720, 300]
+      "position": [
+        720,
+        300
+      ]
     },
     {
       "parameters": {
@@ -63,7 +55,10 @@
       "name": "Allowed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [960, 300]
+      "position": [
+        960,
+        300
+      ]
     },
     {
       "parameters": {
@@ -84,7 +79,10 @@
       "name": "Approval Required?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1190, 430]
+      "position": [
+        1190,
+        430
+      ]
     },
     {
       "parameters": {
@@ -98,35 +96,24 @@
       "name": "Execute Mock ERP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1420, 220]
+      "position": [
+        1420,
+        220
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://host.docker.internal:8000/approval/simulate",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\"request_id\":\"{{$json.request_id}}\",\"approver\":\"demo.approver@example.com\",\"decision\":\"approve\",\"comments\":\"Approved for demo flow\"}"
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json: {...$input.first().json, approval_status: 'pending', execution_status: 'not_executed', next_step: 'An authenticated reviewer must POST the exact intent to /approval/decide, then a caller may execute it with X-Approval-Id.'}}];"
       },
       "id": "SimulateApproval",
-      "name": "Simulate Approval",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1430, 430]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $('Evaluate Guardrails').item.json.extracted_intent.action_type === 'vendor_payment' ? 'http://host.docker.internal:8000/erp/vendor-payment' : 'http://host.docker.internal:8000/erp/inventory-update' }}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $('Evaluate Guardrails').item.json.extracted_intent }}"
-      },
-      "id": "ExecuteAfterApproval",
-      "name": "Execute After Approval",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1680, 430]
+      "name": "Pending Human Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1430,
+        430
+      ]
     },
     {
       "parameters": {
@@ -144,12 +131,12 @@
             },
             {
               "name": "event_type",
-              "value": "workflow_completed",
+              "value": "workflow_outcome",
               "type": "string"
             },
             {
               "name": "request_payload",
-              "value": "={{ $('Webhook Trigger').item.json }}",
+              "value": "={{ $('Webhook Trigger').item.json.body || $('Webhook Trigger').item.json }}",
               "type": "object"
             },
             {
@@ -169,7 +156,7 @@
             },
             {
               "name": "approval_status",
-              "value": "={{ $json.approval_status || ($('Evaluate Guardrails').item.json.requires_approval ? 'approved' : 'not_required') }}",
+              "value": "={{ $json.approval_status || ($('Evaluate Guardrails').item.json.requires_approval ? 'pending' : 'not_required') }}",
               "type": "string"
             },
             {
@@ -189,7 +176,10 @@
       "name": "Prepare Audit Record",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1910, 300]
+      "position": [
+        1910,
+        300
+      ]
     },
     {
       "parameters": {
@@ -203,7 +193,10 @@
       "name": "Write Audit Log",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2140, 300]
+      "position": [
+        2140,
+        300
+      ]
     },
     {
       "parameters": {
@@ -214,7 +207,10 @@
       "name": "Return Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2370, 300]
+      "position": [
+        2370,
+        300
+      ]
     },
     {
       "parameters": {
@@ -237,48 +233,125 @@
       "name": "Blocked Response",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1420, 620]
+      "position": [
+        1420,
+        620
+      ]
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Extract Intent", "type": "main", "index": 0 }]]
-    },
-    "Extract Intent": {
-      "main": [[{ "node": "Evaluate Guardrails", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Evaluate Guardrails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Evaluate Guardrails": {
-      "main": [[{ "node": "Allowed?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Allowed?": {
       "main": [
-        [{ "node": "Execute Mock ERP", "type": "main", "index": 0 }],
-        [{ "node": "Approval Required?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Execute Mock ERP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Approval Required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Approval Required?": {
       "main": [
-        [{ "node": "Simulate Approval", "type": "main", "index": 0 }],
-        [{ "node": "Blocked Response", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Pending Human Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Blocked Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
-    "Simulate Approval": {
-      "main": [[{ "node": "Execute After Approval", "type": "main", "index": 0 }]]
-    },
     "Execute Mock ERP": {
-      "main": [[{ "node": "Prepare Audit Record", "type": "main", "index": 0 }]]
-    },
-    "Execute After Approval": {
-      "main": [[{ "node": "Prepare Audit Record", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Audit Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Blocked Response": {
-      "main": [[{ "node": "Prepare Audit Record", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Audit Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Audit Record": {
-      "main": [[{ "node": "Write Audit Log", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Write Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Write Audit Log": {
-      "main": [[{ "node": "Return Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pending Human Review": {
+      "main": [
+        [
+          {
+            "node": "Prepare Audit Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -289,4 +362,3 @@
   },
   "id": "ai-agent-execution-layer-demo"
 }
-

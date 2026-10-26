@@ -74,6 +74,10 @@ class ApprovalRequest(BaseModel):
     comments: str = Field(default="")
 
 
+class ApprovalDecisionRequest(ApprovalRequest):
+    intent: ExtractedIntent
+
+
 class ERPActionResult(BaseModel):
     request_id: str
     action_type: ActionType
@@ -95,4 +99,3 @@ class AuditEvent(BaseModel):
     approval_status: str = ApprovalStatus.pending.value
     final_erp_response: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=utcnow)
-
